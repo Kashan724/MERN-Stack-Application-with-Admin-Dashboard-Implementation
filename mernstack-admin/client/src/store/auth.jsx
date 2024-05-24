@@ -5,30 +5,24 @@ export const AuthContext = createContext();
 // eslint-disable-next-line react/prop-types
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem("token"));
-  const [user, setUser] = useState("");
+  const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [services, setServices] = useState([]);
-  const authorizationToken = `Bearer ${token}`;
+  const [error, setError] = useState(null);
 
-  // const API = "http://localhost:5000";
-  // const API = "https://api.thapatechnical.site";
-  
+  const authorizationToken = `Bearer ${token}`;
 
   const storeTokenInLS = (serverToken) => {
     setToken(serverToken);
-    return localStorage.setItem("token", serverToken);
+    localStorage.setItem("token", serverToken);
   };
 
-  let isLoggedIn = !!token;
-  console.log("isLoggedIN ", isLoggedIn);
+  const isLoggedIn = !!token;
 
-  // tackling the logout functionality
   const LogoutUser = () => {
     setToken("");
-    return localStorage.removeItem("token");
+    localStorage.removeItem("token");
   };
-
-  // JWT AUTHENTICATION - to get the currently loggedIN user data
 
   const userAuthentication = async () => {
     try {
@@ -40,43 +34,57 @@ export const AuthProvider = ({ children }) => {
         },
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log("user data ", data.userData);
-        setUser(data.userData);
-        setIsLoading(false);
-      } else {
-        console.error("Error fetching user data");
-        setIsLoading(false);
+      const responseText = await response.text();
+      console.log("Response text:", responseText);
+
+      try {
+        const data = JSON.parse(responseText);
+        if (response.ok) {
+          console.log("user data ", data.userData);
+          setUser(data.userData);
+        } else {
+          throw new Error(data.message || "Error fetching user data");
+        }
+      } catch (jsonError) {
+        throw new Error("Failed to parse JSON response");
       }
     } catch (error) {
-      console.error("Error fetching user data");
+      setError(error.message);
+      console.error("Error fetching user data", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // to fetch the services data from the database
   const getServices = async () => {
     try {
       const response = await fetch("http://localhost:5000/api/data/service", {
         method: "GET",
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log(data.msg);
-        setServices(data.msg);
+      const responseText = await response.text();
+      console.log("Response text:", responseText);
+
+      try {
+        const data = JSON.parse(responseText);
+        if (response.ok) {
+          setServices(data.msg);
+        } else {
+          throw new Error(data.message || "Error fetching services");
+        }
+      } catch (jsonError) {
+        throw new Error("Failed to parse JSON response");
       }
     } catch (error) {
-      console.log(`services frontend error: ${error}`);
+      setError(error.message);
+      console.error("Error fetching services", error);
     }
   };
 
   useEffect(() => {
-    getServices();
     userAuthentication();
+    getServices();
   }, []);
-
-  //please subs to thapa technical channel .. also world best js course is coming soon
 
   return (
     <AuthContext.Provider
@@ -88,6 +96,7 @@ export const AuthProvider = ({ children }) => {
         services,
         authorizationToken,
         isLoading,
+        error,
       }}
     >
       {children}

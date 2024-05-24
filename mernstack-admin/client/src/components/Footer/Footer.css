@@ -1,6 +1,11 @@
 footer {
     padding: 3.2rem;
     text-align: center;
-    background-color: var(--btn-color);
+    background-color: black;
+
+
     margin-top: auto;
   }
+footer p{
+  color: white;
+}
